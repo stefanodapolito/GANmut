@@ -12,6 +12,7 @@ import model_linear_2d
 import model_gaussian_2d
 
 import model_linear_2d_v2
+import model_gaussian_2d_v2
 
 class Solver(object):
     """Solver for training and testing StarGAN."""
@@ -110,12 +111,21 @@ class Solver(object):
                     self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
                 )
         if self.parametrization == "gaussian":
-            self.G = model_gaussian_2d.Generator(
-                self.device, self.g_conv_dim, self.c_dim, self.g_repeat_num
-            )
-            self.D = model_gaussian_2d.Discriminator(
-                self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
-            )
+            
+            if self.architecture_v2:
+                
+                self.G = model_gaussian_2d_v2.Generator(self.device,img_size=self.image_size, style_dim=2, num_domains=self.c_dim,max_conv_dim=512, n_r=self.n_r_l )
+                self.D = model_gaussian_2d_v2.Discriminator(img_size=self.image_size, num_domains=self.c_dim, max_conv_dim=512)
+                
+                
+                
+            else:
+                self.G = model_gaussian_2d_v2.Generator(
+                    self.device, self.g_conv_dim, self.c_dim, self.g_repeat_num
+                )
+                self.D = model_gaussian_2d_v2.Discriminator(
+                    self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
+                )
 
         self.g_optimizer = torch.optim.Adam(
             self.G.parameters(), self.g_lr, [self.beta1, self.beta2]
@@ -436,7 +446,7 @@ class Solver(object):
                     x_hat = (
                         alpha * x_real.data + (1 - alpha) * x_fake.data
                     ).requires_grad_(True)
-                    out_src, _, _ = self.D(x_hat)
+                    out_src, _ = self.D(x_hat)
                     d_loss_regularization = self.gradient_penalty(out_src, x_hat)
                 elif self.regularization_type == 'R1': 
                     d_loss_regularization = self.r1_reg(out_src, x_real)
