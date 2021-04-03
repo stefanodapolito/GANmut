@@ -116,6 +116,7 @@ if __name__ == "__main__":
     parser.add_argument("--lambda_d_info", type=float, default=1.0)
     parser.add_argument("--lambda_g_info", type=float, default=1.0)
     parser.add_argument("--lambda_prediction", default=0.5, type=float)
+    parser.add_argument("--architecture_v2", default =False, type=bool)
     
     # parser.add_argument('--lambda_d_AU',type=float, default=1.)
     # parser.add_argument('--lambda_g_fake_AU',type=float, default=1.)
