@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH  --output=log/gaus_2d_%j.out
+#SBATCH  --output=log/gaus_2d_r1_%j.out
 #SBATCH  --gres=gpu:1
 #SBATCH  --mem=30G
 source  /home/paudeld/apps/miniconda2/etc/profile.d/conda.sh

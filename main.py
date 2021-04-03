@@ -83,9 +83,18 @@ if __name__ == "__main__":
     parser.add_argument(
         "--lambda_rec", type=float, default=10, help="weight for reconstruction loss"
     )
+    
+    parser.add_argument('--lambda_regularization', type=float, default=10., help="regularization R1 or gradient-penalty" )
+    
     parser.add_argument(
-        "--lambda_gp", type=float, default=10, help="weight for gradient penalty"
+        "--regularization_type",
+        type=str,
+        default="gp",
+        choices=["R1", "gp"],
     )
+    
+    
+    
     parser.add_argument(
         "--lambda_d_strength",
         type=float,
@@ -107,6 +116,7 @@ if __name__ == "__main__":
     parser.add_argument("--lambda_d_info", type=float, default=1.0)
     parser.add_argument("--lambda_g_info", type=float, default=1.0)
     parser.add_argument("--lambda_prediction", default=0.5, type=float)
+    
     # parser.add_argument('--lambda_d_AU',type=float, default=1.)
     # parser.add_argument('--lambda_g_fake_AU',type=float, default=1.)
     # parser.add_argument('--lambda_g_AU',type=float, default=1.)
@@ -114,7 +124,6 @@ if __name__ == "__main__":
     # parser.add_argument('--lambda_projector',type=float, default=1.)
     # parser.add_argument('--lambda_g_loss_proj_rec',type=float, default=1.)
     # parser.add_argument('--AU',type=bool,default=False)
-    parser.add_argument("--lambda_r1", type=float, default=1.0)
     # parser.add_argument('--ACE',type=bool,default=False)
     parser.add_argument(
         "--dataset_root",

@@ -30,7 +30,8 @@ class Solver(object):
         self.d_repeat_num = config.d_repeat_num
         self.lambda_cls = config.lambda_cls
         self.lambda_rec = config.lambda_rec
-        self.lambda_gp = config.lambda_gp
+        self.lambda_regularization=config.lambda_regularization
+        self.regularization_type=config.regularization_type
         self.lambda_d_strength = config.lambda_d_strength
         self.lambda_g_strength = config.lambda_g_strength
         self.lambda_g_info = config.lambda_g_info
@@ -179,6 +180,19 @@ class Solver(object):
         dydx_l2norm = torch.sqrt(torch.sum(dydx ** 2, dim=1))
         return torch.mean((dydx_l2norm - 1) ** 2)
 
+    #Copied from StarGAN v2 code                
+    def r1_reg(self,d_out, x_in):
+        # zero-centered gradient penalty for real images
+        batch_size = x_in.size(0)
+        grad_dout = torch.autograd.grad(
+            outputs=d_out.sum(), inputs=x_in,
+            create_graph=True, retain_graph=True, only_inputs=True
+        )[0]
+        grad_dout2 = grad_dout.pow(2)
+        assert(grad_dout2.size() == x_in.size())
+        reg = 0.5 * grad_dout2.view(batch_size, -1).sum(1).mean(0)
+        return reg
+
     def label2onehot(self, labels, dim):
         """Convert label indices to one-hot vectors."""
         batch_size = labels.size(0)
@@ -279,6 +293,7 @@ class Solver(object):
                 # =============================================================================....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................====== #
 
                 # Compute loss with real images.
+                x_real.requires_grad_()
                 out_src, out_cls, _ = self.D(x_real)
 
                 d_loss_real = -torch.mean(out_src)
@@ -286,24 +301,30 @@ class Solver(object):
 
                 # Compute loss with fake images.
                 x_fake, cord = self.G(x_real, c_trg, expression_strength)
-                out_src, out_cls, cord_hat = self.D(x_fake.detach())
-                d_loss_fake = torch.mean(out_src)
+                out_src_fake, out_cls, cord_hat = self.D(x_fake.detach())
+                d_loss_fake = torch.mean(out_src_fake)
                 d_loss_info = F.mse_loss(cord_hat, cord)
 
-                # Compute loss for gradient penalty.
-                alpha = torch.rand(x_real.size(0), 1, 1, 1).to(self.device)
-                x_hat = (
-                    alpha * x_real.data + (1 - alpha) * x_fake.data
-                ).requires_grad_(True)
-                out_src, _, _ = self.D(x_hat)
-                d_loss_gp = self.gradient_penalty(out_src, x_hat)
+                # Compute regularization loss  
+                if self.regularization_type == 'gp':
+                    alpha = torch.rand(x_real.size(0), 1, 1, 1).to(self.device)
+                    x_hat = (
+                        alpha * x_real.data + (1 - alpha) * x_fake.data
+                    ).requires_grad_(True)
+                    out_src, _, _ = self.D(x_hat)
+                    d_loss_regularization = self.gradient_penalty(out_src, x_hat)
+                elif self.regularization_type == 'R1': 
+                    d_loss_regularization = self.r1_reg(out_src, x_real)
+                else:
+                    sys.exit("Regularization not supported")
+
 
                 # Backward and optimize.
                 d_loss = (
                     d_loss_real
                     + d_loss_fake
                     + self.lambda_cls * d_loss_cls
-                    + self.lambda_gp * d_loss_gp
+                    + self.lambda_regularization * d_loss_regularization
                     + self.lambda_d_info * d_loss_info
                 )
                 self.reset_grad()
@@ -315,7 +336,7 @@ class Solver(object):
                 loss["D/loss_real"] = d_loss_real.item()
                 loss["D/loss_fake"] = d_loss_fake.item()
                 loss["D/loss_cls"] = d_loss_cls.item()
-                loss["D/loss_gp"] = d_loss_gp.item()
+                loss["D/loss_regularization"] = d_loss_regularization.item()
                 loss["D/loss_info"] = d_loss_info.item()
 
                 # =================================================================================== #
@@ -387,6 +408,7 @@ class Solver(object):
                 # =================================================================================== #
 
                 # Compute loss with real images.
+                x_real.requires_grad_()
                 out_src, out_cls = self.D(x_real)
 
                 d_loss_real = -torch.mean(out_src)
@@ -396,24 +418,28 @@ class Solver(object):
 
                 # Compute loss with fake images.
                 x_fake, label_trg, expr = self.G(x_real)
-                out_src, out_cls = self.D(x_fake.detach())
-                d_loss_fake = torch.mean(out_src)
+                out_src_fake, out_cls = self.D(x_fake.detach())
+                d_loss_fake = torch.mean(out_src_fake)
                 d_loss_expr = F.mse_loss(out_cls[:, self.c_dim :], expr)
 
-                # Compute loss for gradient penalty.
-                alpha = torch.rand(x_real.size(0), 1, 1, 1).to(self.device)
-                x_hat = (
-                    alpha * x_real.data + (1 - alpha) * x_fake.data
-                ).requires_grad_(True)
-                out_src, _ = self.D(x_hat)
-                d_loss_gp = self.gradient_penalty(out_src, x_hat)
+                if self.regularization_type == 'gp':
+                    alpha = torch.rand(x_real.size(0), 1, 1, 1).to(self.device)
+                    x_hat = (
+                        alpha * x_real.data + (1 - alpha) * x_fake.data
+                    ).requires_grad_(True)
+                    out_src, _, _ = self.D(x_hat)
+                    d_loss_regularization = self.gradient_penalty(out_src, x_hat)
+                elif self.regularization_type == 'R1': 
+                    d_loss_regularization = self.r1_reg(out_src, x_real)
+                else:
+                    sys.exit("Regularization not supported")
 
                 # Backward and optimize.
                 d_loss = (
                     d_loss_real
                     + d_loss_fake
                     + self.lambda_cls * d_loss_cls
-                    + self.lambda_gp * d_loss_gp
+                    + self.lambda_regularization * d_loss_regularization
                     + self.lambda_expr * d_loss_expr
                 )
 
@@ -426,7 +452,7 @@ class Solver(object):
                 loss["D/loss_real"] = d_loss_real.item()
                 loss["D/loss_fake"] = d_loss_fake.item()
                 loss["D/loss_cls"] = d_loss_cls.item()
-                loss["D/loss_gp"] = d_loss_gp.item()
+                loss["D/loss_reguarization"] = d_loss_regularization.item()
 
                 # =================================================================================== #
                 #                               3. Train the generator                                #
