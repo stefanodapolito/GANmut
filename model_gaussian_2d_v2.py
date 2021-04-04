@@ -277,10 +277,15 @@ class Generator(nn.Module):
             
             
 
-    def print_axes(self):
+        
+    def print_expr(self):
 
-        print("AXES")
-        print(nn.functional.normalize(self.axes.weight, p=2, dim=1))
+        print("MU")
+        print(torch.tanh(self.mu.weight))
+        print("Covariance Matrix angles")
+        print(self.covariance_angles.weight)
+        print("covariance matrix axes")
+        print(self.covariance_axes.weight)
         
         
     
