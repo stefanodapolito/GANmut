@@ -158,7 +158,7 @@ class Generator(nn.Module):
                     "Modality can be only 'random','manual_selection','train','test'."
                 )
 
-            expr2 = expr.view(c.size(0), 2, 1, 1)  # c.size(0) if bug
+            expr2 = expr.view(x.size(0), 2, 1, 1)  # put c.size(0) if bug!!!!!!!
             expr3 = expr2.repeat(1, 1, x.size(2), x.size(3))
 
             x = torch.cat([x, expr3], dim=1)

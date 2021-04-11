@@ -100,9 +100,6 @@ class Generator(nn.Module):
 
     def forward(self, x, expr=None, label_trg=None):
 
-        # mo=torch.Tensor([-1.,-1.],device=self.device)
-        # po=torch.Tensor([1.,1.],device=self.device)
-
         batch_size = x.size(0)
 
         # case when one watn to reproduce a basic emotion
