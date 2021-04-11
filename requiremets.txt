@@ -1,6 +1,8 @@
+cmake
+dlib
 matplotlib
 numpy
 tqdm
 opencv-python
-torch
 tensorflow
+
