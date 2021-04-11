@@ -92,17 +92,22 @@ class Generator(nn.Module):
         self.main = nn.Sequential(*layers)
 
     def forward(
-        self, x, c, expr_strength, mode="train", manual_expr=None,
+        self,
+        x,
+        c,
+        expr_strength,
+        mode="train",
+        manual_expr=None,
     ):
 
         """
-           mode can be:
-               
-               1) random: code is completely random
-               2) manual_selection: code is given manually
-               3) train: first nr direction ar choosen randomly
-               4) test: no direction is choosen randomly
-    """
+        mode can be:
+
+            1) random: code is completely random
+            2) manual_selection: code is given manually
+            3) train: first nr direction ar choosen randomly
+            4) test: no direction is choosen randomly
+        """
 
         if mode == "random":
 
@@ -205,5 +210,3 @@ class Discriminator(nn.Module):
             out_cls.view(out_cls.size(0), out_cls.size(1)),
             out_expr_strength.view(out_expr_strength.size(0), 2),
         )
-
-

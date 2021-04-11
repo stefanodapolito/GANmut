@@ -1,10 +1,11 @@
 import os
 import argparse
-import solver
+
 from torch.backends import cudnn
-import dataloader_affectnet
 import torch
 
+from core.solver import Solver
+from utils.dataloader import DataLoader
 
 def str2bool(v):
     return v.lower() in ("true")
@@ -30,7 +31,7 @@ def main(config):
 
     train_exp_csv_file = os.path.join(config.dataset_root, "training.csv")
 
-    train_dataset = dataloader_affectnet.DataloaderAffectnet(
+    train_dataset = DataLoader(
         img_size=config.image_size, exp_classes=config.c_dim, is_transform=True
     )
     train_dataset.load_data(train_exp_csv_file, img_root)
@@ -41,7 +42,7 @@ def main(config):
         num_workers=config.num_workers,
     )
 
-    solve = solver.Solver(loader, config)
+    solve = Solver(loader, config)
 
     solve.train()
 
@@ -83,49 +84,44 @@ if __name__ == "__main__":
     parser.add_argument(
         "--lambda_rec", type=float, default=10, help="weight for reconstruction loss"
     )
-    
-    parser.add_argument('--lambda_regularization', type=float, default=10., help="regularization R1 or gradient-penalty" )
-    
+
+    parser.add_argument(
+        "--lambda_regularization",
+        type=float,
+        default=10.0,
+        help="regularization R1 or gradient-penalty",
+    )
+
     parser.add_argument(
         "--regularization_type",
         type=str,
         default="gp",
         choices=["R1", "gp"],
     )
-    
-    
-    
+
     parser.add_argument(
         "--lambda_d_strength",
         type=float,
         default=1.0,
-        help="weight for stregth expr penalty",
+        help="weight for strength expr penalty",
     )
     parser.add_argument(
         "--lambda_g_strength",
         type=float,
         default=1.0,
-        help="weight for stregth expr penalty",
+        help="weight for strength expr penalty",
     )
     parser.add_argument(
         "--lambda_expr",
         type=float,
         default=1.0,
-        help="weight for d learning atent coordinat",
+        help="weight for d learning latent coordinates",
     )
     parser.add_argument("--lambda_d_info", type=float, default=1.0)
     parser.add_argument("--lambda_g_info", type=float, default=1.0)
     parser.add_argument("--lambda_prediction", default=0.5, type=float)
-    parser.add_argument("--architecture_v2", default =False, type=bool)
-    
-    # parser.add_argument('--lambda_d_AU',type=float, default=1.)
-    # parser.add_argument('--lambda_g_fake_AU',type=float, default=1.)
-    # parser.add_argument('--lambda_g_AU',type=float, default=1.)
-    # parser.add_argument('--lambda_d_fake_AU',type=float, default=1.)
-    # parser.add_argument('--lambda_projector',type=float, default=1.)
-    # parser.add_argument('--lambda_g_loss_proj_rec',type=float, default=1.)
-    # parser.add_argument('--AU',type=bool,default=False)
-    # parser.add_argument('--ACE',type=bool,default=False)
+    parser.add_argument("--architecture_v2", default=False, type=bool)
+
     parser.add_argument(
         "--dataset_root",
         type=str,
@@ -175,7 +171,7 @@ if __name__ == "__main__":
         "--beta2", type=float, default=0.999, help="beta2 for Adam optimizer"
     )
     parser.add_argument(
-        "--resume_iters", type=int, default=None, help="resume training from this step"
+        "--resume_iter", type=int, default=None, help="resume training from this step"
     )
     parser.add_argument(
         "--n_r_l",
@@ -187,7 +183,7 @@ if __name__ == "__main__":
         "--n_r_g",
         type=int,
         default=9,
-        help="number per training batch of codes that are not equal to the mean of any emotion mode for GGANmut, see paper",
+        help="# of condition randomly sampled in GGANmut training, see paper",
     )
     parser.add_argument(
         "--cycle_loss",
@@ -208,15 +204,10 @@ if __name__ == "__main__":
     parser.add_argument("--use_tensorboard", type=str2bool, default=True)
 
     # Directories.
-    parser.add_argument("--celeba_image_dir", type=str, default="data/celeba/images")
-    parser.add_argument(
-        "--attr_path", type=str, default="data/celeba/list_attr_celeba.txt"
-    )
-    parser.add_argument("--rafd_image_dir", type=str, default="data/RaFD/train")
-    parser.add_argument("--log_dir", type=str, default="stargan/logs")
-    parser.add_argument("--model_save_dir", type=str, default="stargan/models")
-    parser.add_argument("--sample_dir", type=str, default="stargan/samples")
-    parser.add_argument("--result_dir", type=str, default="stargan/results")
+    parser.add_argument("--log_dir", type=str, default="GANmut/logs")
+    parser.add_argument("--model_save_dir", type=str, default="GANmut/models")
+    parser.add_argument("--sample_dir", type=str, default="GANmut/samples")
+    parser.add_argument("--result_dir", type=str, default="GANmut/results")
 
     # Step size.
     parser.add_argument("--log_step", type=int, default=100)

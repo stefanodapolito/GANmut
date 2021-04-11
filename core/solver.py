@@ -8,11 +8,9 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 
-import model_linear_2d
-import model_gaussian_2d
+import models.model_linear_2d
+import models.model_gaussian_2d
 
-import model_linear_2d_v2
-import model_gaussian_2d_v2
 
 class Solver(object):
     """Solver for training and testing StarGAN."""
@@ -32,8 +30,8 @@ class Solver(object):
         self.d_repeat_num = config.d_repeat_num
         self.lambda_cls = config.lambda_cls
         self.lambda_rec = config.lambda_rec
-        self.lambda_regularization=config.lambda_regularization
-        self.regularization_type=config.regularization_type
+        self.lambda_regularization = config.lambda_regularization
+        self.regularization_type = config.regularization_type
         self.lambda_d_strength = config.lambda_d_strength
         self.lambda_g_strength = config.lambda_g_strength
         self.lambda_g_info = config.lambda_g_info
@@ -53,7 +51,7 @@ class Solver(object):
         self.n_critic = config.n_critic
         self.beta1 = config.beta1
         self.beta2 = config.beta2
-        self.resume_iters = config.resume_iters
+        self.resume_iter = config.resume_iter
         self.n_r_l = config.n_r_l
         self.n_r_g = config.n_r_g
         self.cycle_loss = config.cycle_loss
@@ -93,39 +91,25 @@ class Solver(object):
         """Create a generator and a discriminator."""
 
         if self.parametrization == "linear":
-            
-            if self.architecture_v2:
-                print("Version 2!!!!!!!")
-                self.G = model_linear_2d_v2.Generator(self.device,img_size=self.image_size, style_dim=2, num_domains=self.c_dim,max_conv_dim=512, n_r=self.n_r_l )
-                self.D = model_linear_2d_v2.Discriminator(img_size=self.image_size, num_domains=self.c_dim, max_conv_dim=512)
-                
-            else:
-                self.G = model_linear_2d.Generator(
-                    self.device,
-                    self.g_conv_dim,
-                    self.c_dim,
-                    self.g_repeat_num,
-                    n_r=self.n_r_l,
-                )
-                self.D = model_linear_2d.Discriminator(
-                    self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
-                )
-        if self.parametrization == "gaussian":
-            
-            if self.architecture_v2:
-                
-                self.G = model_gaussian_2d_v2.Generator(self.device,img_size=self.image_size, style_dim=2, num_domains=self.c_dim,max_conv_dim=512, n_r=self.n_r_l )
-                self.D = model_gaussian_2d_v2.Discriminator(img_size=self.image_size, num_domains=self.c_dim, max_conv_dim=512)
-                
-                
-                
-            else:
-                self.G = model_gaussian_2d_v2.Generator(
-                    self.device, self.g_conv_dim, self.c_dim, self.g_repeat_num
-                )
-                self.D = model_gaussian_2d_v2.Discriminator(
-                    self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
-                )
+
+            self.G = models.model_linear_2d.Generator(
+                self.device,
+                self.g_conv_dim,
+                self.c_dim,
+                self.g_repeat_num,
+                n_r=self.n_r_l,
+            )
+            self.D = models.model_linear_2d.Discriminator(
+                self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
+            )
+        elif self.parametrization == "gaussian":
+
+            self.G = models.model_gaussian_2d.Generator(
+                self.device, self.g_conv_dim, self.c_dim, self.g_repeat_num
+            )
+            self.D = models.model_gaussian_2d.Discriminator(
+                self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
+            )
 
         self.g_optimizer = torch.optim.Adam(
             self.G.parameters(), self.g_lr, [self.beta1, self.beta2]
@@ -148,11 +132,11 @@ class Solver(object):
         print(name)
         print("The number of parameters: {}".format(num_params))
 
-    def restore_model(self, resume_iters):
+    def restore_model(self, resume_iter):
         """Restore the trained generator and discriminator."""
-        print("Loading the trained models from step {}...".format(resume_iters))
-        G_path = os.path.join(self.model_save_dir, "{}-G.ckpt".format(resume_iters))
-        D_path = os.path.join(self.model_save_dir, "{}-D.ckpt".format(resume_iters))
+        print("Loading the trained models from step {}...".format(resume_iter))
+        G_path = os.path.join(self.model_save_dir, "{}-G.ckpt".format(resume_iter))
+        D_path = os.path.join(self.model_save_dir, "{}-D.ckpt".format(resume_iter))
         self.G.load_state_dict(
             torch.load(G_path, map_location=lambda storage, loc: storage)
         )
@@ -162,7 +146,7 @@ class Solver(object):
 
     def build_tensorboard(self):
         """Build a tensorboard logger."""
-        from logger import Logger
+        from utils.logger import Logger
 
         self.logger = Logger(self.log_dir)
 
@@ -199,16 +183,19 @@ class Solver(object):
         dydx_l2norm = torch.sqrt(torch.sum(dydx ** 2, dim=1))
         return torch.mean((dydx_l2norm - 1) ** 2)
 
-    #Copied from StarGAN v2 code                
-    def r1_reg(self,d_out, x_in):
+    # Copied from StarGAN v2 code
+    def r1_reg(self, d_out, x_in):
         # zero-centered gradient penalty for real images
         batch_size = x_in.size(0)
         grad_dout = torch.autograd.grad(
-            outputs=d_out.sum(), inputs=x_in,
-            create_graph=True, retain_graph=True, only_inputs=True
+            outputs=d_out.sum(),
+            inputs=x_in,
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True,
         )[0]
         grad_dout2 = grad_dout.pow(2)
-        assert(grad_dout2.size() == x_in.size())
+        assert grad_dout2.size() == x_in.size()
         reg = 0.5 * grad_dout2.view(batch_size, -1).sum(1).mean(0)
         return reg
 
@@ -256,15 +243,15 @@ class Solver(object):
         d_lr = self.d_lr
 
         # Start training from scratch or resume training.
-        start_iters = 0
-        if self.resume_iters:
-            start_iters = self.resume_iters
-            self.restore_model(self.resume_iters)
+        start_iter = 0
+        if self.resume_iter:
+            start_iter = self.resume_iter
+            self.restore_model(self.resume_iter)
 
         # Start training.
         print("Start training...")
         start_time = time.time()
-        for i in range(start_iters, self.num_iters):
+        for i in range(start_iter, self.num_iters):
 
             # =================================================================================== #
             #                             1. Preprocess input data                                #
@@ -301,16 +288,15 @@ class Solver(object):
                     torch.rand(x_real.size(0), device=self.device) * 0.8 + 0.2
                 )
 
-                ##neutral expression strength set to 0
+                # neutral expression strength set to 0
                 expression_strength[label_trg.eq(0)] = (
                     0.2 * (expression_strength[label_trg.eq(0)] - 0.2) / 0.8
                 )
                 neutral_mask = (expression_strength > 0.2).to(torch.float)
 
-                # ============================================================....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................======================= #
-                #                             2. Train the discriminator                              #.....................................................................................................................................................................................................................................................................................................................
-                # =============================================================================....................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................====== #
-
+                # =================================================================================== #
+                #                             2. Train the discriminator                              #
+                # =================================================================================== #
                 # Compute loss with real images.
                 x_real.requires_grad_()
                 out_src, out_cls, _ = self.D(x_real)
@@ -324,19 +310,18 @@ class Solver(object):
                 d_loss_fake = torch.mean(out_src_fake)
                 d_loss_info = F.mse_loss(cord_hat, cord)
 
-                # Compute regularization loss  
-                if self.regularization_type == 'gp':
+                # Compute regularization loss
+                if self.regularization_type == "gp":
                     alpha = torch.rand(x_real.size(0), 1, 1, 1).to(self.device)
                     x_hat = (
                         alpha * x_real.data + (1 - alpha) * x_fake.data
                     ).requires_grad_(True)
                     out_src, _, _ = self.D(x_hat)
                     d_loss_regularization = self.gradient_penalty(out_src, x_hat)
-                elif self.regularization_type == 'R1': 
+                elif self.regularization_type == "R1":
                     d_loss_regularization = self.r1_reg(out_src, x_real)
                 else:
                     sys.exit("Regularization not supported")
-
 
                 # Backward and optimize.
                 d_loss = (
@@ -373,11 +358,14 @@ class Solver(object):
                     g_loss_cls = self.classification_loss(out_cls[5:], label_trg[5:])
                     expr_strength_hat = (F.softmax(out_cls, dim=1)).max(1)[0]
 
-                    g_loss_expression_strength = F.mse_loss(
-                        expr_strength_hat * neutral_mask,
-                        expression_strength * neutral_mask,
-                        reduction="sum",
-                    ) / torch.sum(neutral_mask)
+                    g_loss_expression_strength = (
+                        F.mse_loss(
+                            expr_strength_hat * neutral_mask,
+                            expression_strength * neutral_mask,
+                            reduction="sum",
+                        )
+                        / torch.sum(neutral_mask)
+                    )
                     g_loss_info = torch.nn.functional.mse_loss(cord_hat, cord)
 
                     # Target-to-original domain..shape
@@ -441,14 +429,14 @@ class Solver(object):
                 d_loss_fake = torch.mean(out_src_fake)
                 d_loss_expr = F.mse_loss(out_cls[:, self.c_dim :], expr)
 
-                if self.regularization_type == 'gp':
+                if self.regularization_type == "gp":
                     alpha = torch.rand(x_real.size(0), 1, 1, 1).to(self.device)
                     x_hat = (
                         alpha * x_real.data + (1 - alpha) * x_fake.data
                     ).requires_grad_(True)
                     out_src, _ = self.D(x_hat)
                     d_loss_regularization = self.gradient_penalty(out_src, x_hat)
-                elif self.regularization_type == 'R1': 
+                elif self.regularization_type == "R1":
                     d_loss_regularization = self.r1_reg(out_src, x_real)
                 else:
                     sys.exit("Regularization not supported")
@@ -500,7 +488,7 @@ class Solver(object):
                     )
                     # Target-to-original domain..shape
 
-                    x_reconst, _, _ = self.G(x_fake, expr_org[:, self.c_dim :])
+                    x_reconst, _, _ = self.G(x_fake, expr_org[:, self.c_dim:])
                     g_loss_rec = torch.mean(torch.abs(x_real - x_reconst))
 
                     g_loss = (
@@ -540,11 +528,9 @@ class Solver(object):
 
             if (i + 1) % self.sample_step == 0:
 
-                
-
                 with torch.no_grad():
                     if self.parametrization == "linear":
-                        
+
                         print("AXES:")
                         print(self.G.print_axes())
 
@@ -610,10 +596,10 @@ class Solver(object):
                             )
 
                     if self.parametrization == "gaussian":
-                        
+
                         print("MODES:")
                         print(self.G.print_expr())
-                        
+
                         x_fake_list = [x_fixed]
                         for expression in range(self.c_dim):
 
@@ -625,7 +611,7 @@ class Solver(object):
                                     .repeat(x_fixed.size(0), 1),
                                 )[0][:, [2, 1, 0], :, :]
                             )
-                            
+
                         x_concat = torch.cat(x_fake_list, dim=3)
                         sample_path = os.path.join(
                             self.sample_dir, "{}-images.jpg".format(i + 1)
@@ -637,9 +623,7 @@ class Solver(object):
                             padding=0,
                         )
                         print(
-                            "Saved real and fake images into {}...".format(
-                                sample_path
-                            )
+                            "Saved real and fake images into {}...".format(sample_path)
                         )
 
             # Save model checkpoints.

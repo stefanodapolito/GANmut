@@ -7,3 +7,4 @@ log
 *.sh
 models/gaus_2d/1800000-D
 models/1000000-D.ckpt
+.idea

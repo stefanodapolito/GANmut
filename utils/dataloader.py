@@ -1,15 +1,14 @@
-import torch
-import scipy.misc as m
 import os
 import csv
-import numpy as np
 from tqdm import tqdm
 from torch.utils import data
+import torch
 import cv2
-from transforms import initAlignTransfer
+
+from utils.transforms import initAlignTransfer
 
 
-class DataloaderAffectnet(data.Dataset):
+class DataLoader(data.Dataset):
     def __init__(self, img_size=128, exp_classes=7, is_transform=False):
         self.img_size = img_size
         self.is_transform = is_transform
@@ -19,8 +18,6 @@ class DataloaderAffectnet(data.Dataset):
         self.val_lbl_list, self.aro_lbl_list = [], []
         self.img_path_list = []
 
-    # exp_csv_file: training_RAF/validate
-    # va_csv_file: training/validate
     def load_data(self, exp_csv_file, img_root):
         num = 0
         with open(exp_csv_file, "r") as csvfile:
@@ -31,6 +28,7 @@ class DataloaderAffectnet(data.Dataset):
                 cur_sample["img_path"] = os.path.join(
                     img_root, row["subDirectory_filePath"].split("/")[1]
                 )
+                # for AffectNet
                 # 0: Neutral, 1: Happy, 2: Sad, 3: Surprise, 4: Fear, 5: Disgust, 6: Anger, 7: Contempt
                 # 8: None, 9: Uncertain, 10: No-Face
                 cur_sample["expression"] = int(row["expression"][0:])

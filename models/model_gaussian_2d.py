@@ -1,6 +1,5 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 
 
@@ -30,9 +29,8 @@ class Generator(nn.Module):
 
         self.device = device
         self.c_dim = c_dim
-        # the six axes, real weight are 6X2
 
-        # a covariance matrix is represented by value of its eigenvalues and direction of wigenvector
+        # a covariance matrix is represented by value of its eigenvalues and direction of eigenvectors
         self.covariance_angles = nn.Linear(c_dim, 1, bias=False)
         self.covariance_angles.weight.data.fill_(0.0)
 
@@ -40,7 +38,6 @@ class Generator(nn.Module):
         self.covariance_axes.weight.data.fill_(1.0)
 
         self.mu = nn.Linear(2, c_dim, bias=False)
-        self.covariance_axes.weight.data.fill_(1.0)
 
         layers = []
         layers.append(
@@ -147,7 +144,7 @@ class Generator(nn.Module):
         )
         C_inv = torch.inverse(C)
 
-        # vector of unnrmalized distances
+        # vector of un-normalized distances
         rep_mu = torch.tanh(self.mu.weight.unsqueeze(0).repeat(x.size(0), 1, 1))
         rep_expr = expr.unsqueeze(1).repeat(1, 7, 1)
         vector = rep_expr - rep_mu

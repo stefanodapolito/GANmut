@@ -3,18 +3,16 @@ Affine transforms implemented on torch tensors, and
 requiring only one interpolation
 """
 
-import math
 import random
-import torch as th
 import cv2
 import numpy as np
 
 
 def th_affine2d(x, matrix, output_img_width, output_img_height):
     """
-        2D Affine image transform on torch.Tensor
+    2D Affine image transform on torch.Tensor
 
-        """
+    """
     assert matrix.ndim == 2
     matrix = matrix[:2, :]
     transform_matrix = matrix
