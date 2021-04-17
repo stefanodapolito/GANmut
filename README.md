@@ -2,9 +2,6 @@
 
 ### Accepted to CVPR 2021
 
-
-
-This repository provides the official PyTorch implementation of the following paper:
 > **GANmut: Learning Interpretable Conditional Space for Gamut of Emotions**<br>
 > Stefano d'Apolito<sup>1</sup>, Danda Pani Paudel<sup>1</sup>, Zhiwu Huang<sup>1</sup>, Andres Romero<sup>1</sup>, Luc Van Gool<sup>1,2</sup>    <br/>
 > <sup>1</sup>Computer Vision Lab, ETH Zurich, Switzerland, <sup>2</sup>PSI, KU Leuven, Belgium <br>
