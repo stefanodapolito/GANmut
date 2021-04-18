@@ -10,6 +10,8 @@ import numpy as np
 
 import models.model_linear_2d
 import models.model_gaussian_2d
+import models.model_linear_3d
+import models.model_gaussian_3d
 
 
 class Solver(object):
@@ -91,25 +93,53 @@ class Solver(object):
         """Create a generator and a discriminator."""
 
         if self.parametrization == "linear":
+            
+            if self.tridimensional:
 
-            self.G = models.model_linear_2d.Generator(
-                self.device,
-                self.g_conv_dim,
-                self.c_dim,
-                self.g_repeat_num,
-                n_r=self.n_r_l,
-            )
-            self.D = models.model_linear_2d.Discriminator(
-                self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
-            )
+                self.G = models.model_linear_3d.Generator(
+                    self.device,
+                    self.g_conv_dim,
+                    self.c_dim,
+                    self.g_repeat_num,
+                    n_r=self.n_r_l,
+                )
+                self.D = models.model_linear_3d.Discriminator(
+                    self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
+                )
+                
+            else:
+                
+                self.G = models.model_linear_2d.Generator(
+                    self.device,
+                    self.g_conv_dim,
+                    self.c_dim,
+                    self.g_repeat_num,
+                    n_r=self.n_r_l,
+                )
+                self.D = models.model_linear_2d.Discriminator(
+                    self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
+                )
+                
+                
         elif self.parametrization == "gaussian":
+            
+            if self.tridimensional:
 
-            self.G = models.model_gaussian_2d.Generator(
-                self.device, self.g_conv_dim, self.c_dim, self.g_repeat_num
-            )
-            self.D = models.model_gaussian_2d.Discriminator(
-                self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
-            )
+                self.G = models.model_gaussian_3d.Generator(
+                    self.device, self.g_conv_dim, self.c_dim, self.g_repeat_num
+                )
+                self.D = models.model_gaussian_3d.Discriminator(
+                    self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
+                )
+                
+            else:
+                
+                self.G = models.model_gaussian_3d.Generator(
+                    self.device, self.g_conv_dim, self.c_dim, self.g_repeat_num
+                )
+                self.D = models.model_gaussian_3d.Discriminator(
+                    self.image_size, self.d_conv_dim, self.c_dim, self.d_repeat_num
+                )
 
         self.g_optimizer = torch.optim.Adam(
             self.G.parameters(), self.g_lr, [self.beta1, self.beta2]

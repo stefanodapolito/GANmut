@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
+import sys
+import torch.nn.functional as F
 
 
 class ResidualBlock(nn.Module):
@@ -24,21 +25,17 @@ class ResidualBlock(nn.Module):
 class Generator(nn.Module):
     """Generator network."""
 
-    def __init__(self, device, conv_dim=64, c_dim=7, repeat_num=6):
-
+    def __init__(self, device, conv_dim=64, c_dim=8, repeat_num=6, n_r=5):
         super(Generator, self).__init__()
 
-        self.device = device
+        self.nr = n_r
         self.c_dim = c_dim
+        self.device = device
         # the six axes, real weight are 6X2
-        
-        
-        
-        self.covariances_list = nn.Linear(c_dim*3,3,bias=False).to(device)
-            
-        self.mu = nn.Linear(3, c_dim, bias=False)
-        
-            
+        self.axes = nn.Linear(3, c_dim - 1)
+        # make the weight small so that they can easily modified by gradient descend
+        self.axes.weight.data = self.axes.weight.data * 0.0001
+
         layers = []
         layers.append(
             nn.Conv2d(3 + 3, conv_dim, kernel_size=7, stride=1, padding=3, bias=False)
@@ -95,73 +92,67 @@ class Generator(nn.Module):
         layers.append(nn.Tanh())
         self.main = nn.Sequential(*layers)
 
-    def forward(self, x, expr=None, label_trg=None):
+    def forward(
+        self,
+        x,
+        c,
+        expr_strength,
+        mode="train",
+        manual_expr=None,
+    ):
 
-        # mo=torch.Tensor([-1.,-1.],device=self.device)
-        # po=torch.Tensor([1.,1.],device=self.device)
+        """
+        mode can be:
 
-        batch_size = x.size(0)
+            2) manual_selection: code is given manually
+            3) train: first nr direction ar choosen randomly
+            4) test: no direction is choosen randomly
+        """
 
-        # case when one watn to reproduce a basic emotion
-        if label_trg is not None:
 
-            expr = torch.empty((batch_size, 3), device=self.device)
+        axes_normalized = nn.functional.normalize(self.axes.weight, p=2, dim=1)
 
-            for batch_sample in range(batch_size):
+        # axis selection
+        if not mode == "manual_selection":
+            axis = torch.mm(
+                c[:, 1 : self.c_dim], axes_normalized
+            )  # axis 0 is neutral and so must be set to 0
 
-                expr[batch_sample, :] = self.mu.weight[label_trg[batch_sample]]
+        if mode == "train":
+            expr = (axis.transpose(0, 1) * expr_strength).transpose(
+                0, 1
+            ) + torch.randn(c.size(0), 3, device=self.device) * 0.075
+            if x.size(0) >= self.nr:
+                n_random = min(self.nr, x.size(0))
+                
+                vec=torch.rand(n_random,3,device=self.device)
+                random_vector=F.normalize(vec,p=2,dim=1)*expr_strength[:n_random].unsqueeze(1)
+                        
+                expr[:n_random,:]=random_vector
+                
 
-        if expr is None:
+        elif mode == "manual_selection":
+            expr = manual_expr
 
-            expr = torch.empty((batch_size, 3), device=self.device)
-            batch_size = x.size(0)
-            if batch_size >= self.c_dim:
-                expr[: self.c_dim, :] = torch.tanh(self.mu.weight)
-                expr[self.c_dim :] = (
-                    torch.rand((batch_size - self.c_dim, 3), device=self.device) * 2 - 1
-                )
+        elif mode == "test":
+            expr = (axis.transpose(0, 1) * expr_strength).transpose(0, 1)
 
-            else:
-                expr[:batch_size, :] = torch.tanh(self.mu.weight[:batch_size])
+        else:
 
-        
+            sys.exit(
+                "Modality can be only 'random','manual_selection','train','test'."
+            )
 
-        
-        C_inv_list = [torch.inverse(self.covariances_list.weight[:,emo:emo+3]+ \
-                        self.covariances_list.weight[:,emo:emo+3].t()) for emo in range(self.c_dim)]
-
-        # vector of unnrmalized distances
-        rep_mu = torch.tanh(self.mu.weight.unsqueeze(0).repeat(x.size(0), 1, 1))
-        rep_expr = expr.unsqueeze(1).repeat(1, self.c_dim, 1)
-        vector = rep_expr - rep_mu
-
-        mahalanobis_distances = torch.empty(batch_size, self.c_dim, device=self.device)
-
-        
-        # mahalanobis_distance^2=vec*C_inv*vec
-        for el in range(batch_size):
-            for ex in range(self.c_dim):
-                mahalanobis_distances[el, ex] = (
-                    torch.matmul(vector[el, ex], torch.matmul(C_inv_list[ex],vector[el, ex])))
-
-        # reshaping expr
-        expr2 = expr.view(x.size(0), 3, 1, 1)
+        expr2 = expr.view(x.size(0), 3, 1, 1)  # put c.size(0) if bug!!!!!!!
         expr3 = expr2.repeat(1, 1, x.size(2), x.size(3))
-        # produce imagines
+
         x = torch.cat([x, expr3], dim=1)
-        return self.main(x), mahalanobis_distances, expr
+        return self.main(x), expr
 
-    def print_expr(self):
+    def print_axes(self):
 
-        print("MU")
-        print(torch.tanh(self.mu.weight))
-        print("COVARIAMCES:")
-        for emo in range(self.c_dim):
-            print(self.covariances_list.weight[:,emo:emo+3]+ \
-                        self.covariances_list.weight[:,emo:emo+3].t())
-            
-        
-        
+        print("AXES")
+        print(nn.functional.normalize(self.axes.weight, p=2, dim=1))
 
 
 class Discriminator(nn.Module):
@@ -186,10 +177,16 @@ class Discriminator(nn.Module):
         self.conv1 = nn.Conv2d(
             curr_dim, 1, kernel_size=3, stride=1, padding=1, bias=False
         )
-        self.conv2 = nn.Conv2d(curr_dim, c_dim + 3, kernel_size=kernel_size, bias=False)
+        self.conv2 = nn.Conv2d(curr_dim, c_dim, kernel_size=kernel_size, bias=False)
+        self.conv3 = nn.Conv2d(curr_dim, 3, kernel_size=kernel_size, bias=False)
 
     def forward(self, x):
         h = self.main(x)
         out_src = self.conv1(h)
         out_cls = self.conv2(h)
-        return out_src, out_cls.view(out_cls.size(0), out_cls.size(1))
+        out_expr_strength = self.conv3(h)
+        return (
+            out_src,
+            out_cls.view(out_cls.size(0), out_cls.size(1)),
+            out_expr_strength.view(out_expr_strength.size(0), 3),
+        )
