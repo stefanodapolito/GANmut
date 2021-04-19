@@ -380,7 +380,7 @@ class Solver(object):
                 if (i + 1) % self.n_critic == 0:
                     # Original-to-target domain.
                     with torch.no_grad():
-                        _, cls_real, _ = self.D(x_real)
+                        _, cls_real, cord_hat_real = self.D(x_real)
 
                     x_fake, cord = self.G(x_real, c_trg, expression_strength)
                     out_src, out_cls, cord_hat = self.D(x_fake)
@@ -410,7 +410,7 @@ class Solver(object):
                             c_org,
                             None,
                             mode="manual_selection",
-                            manual_expr=cord_hat,
+                            manual_expr=cord_hat_real,
                         )
                     else:
                         sys.exit(
