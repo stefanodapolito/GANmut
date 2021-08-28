@@ -66,7 +66,7 @@ For any questions, suggestions, or issues with the code, please contact Stefano 
 If you find this project helpful, please consider citing us as follows:
 ```bash
 @inproceedings{sdapolito2021GANmut,
-      title = {Efficient Conditional GAN Transfer with Knowledge Propagation across Classes},
+      title = {GANmut: Learning Interpretable Conditional Space for Gamut of Emotions},
       author    = {d'Apolito, Stefano and
                    Paudel, ‪Danda Pani and
                    Huang, Zhiwu and
