@@ -27,12 +27,12 @@ proposed framework, by allowing us to control and generate a gamut of complex an
 To see an example of how to use GANmut to edit face emotion, install jupyter and open `notebook/images_generation.ipynb`.
 
 
-:-------------------------:|:-------------------------:
+
 ![](Images/Einstein_original.png)  |  ![](Images/detected_face.png)
-:-------------------------:|:-------------------------:
-Edited emotion             |  Edited emotion
-:-------------------------:|:-------------------------:
+
 ![](Images/lin_edited.png)  |  ![](Images/edited_image.png)
+
+![](Images/lin_original.png)  |  ![](Images/edited_original.png)
 
 
 
