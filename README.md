@@ -28,11 +28,11 @@ To see an example of how to use GANmut to edit face emotion, install jupyter and
 
 
 
-![](Images/Einstein_original.png)  |  ![](Images/detected_face.png)
+![](Images/Einstein_original.png)    ![](Images/detected_face.png)
 
-![](Images/lin_edited.png)  |  ![](Images/edited_image.png)
+![](Images/lin_edited.png)    ![](Images/edited_image.png)
 
-![](Images/lin_original.png)  |  ![](Images/edited_original.png)
+![](Images/lin_original.png)    ![](Images/edited_original.png)
 
 
 
