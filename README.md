@@ -26,6 +26,10 @@ proposed framework, by allowing us to control and generate a gamut of complex an
 ## Editing facial emotions with pre-trained networks
 To see an example of how to use GANmut to edit face emotion, install jupyter and open `notebook/images_generation.ipynb`.
 
+Original image            |  Detected face
+:-------------------------:|:-------------------------:
+![](Images/Einstein.jpg)  |  ![](detected_face.png)
+
 
 ## Training networks
 
